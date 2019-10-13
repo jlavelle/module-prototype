@@ -45,10 +45,13 @@ const module = (() => {
     methods: x => Obj.empty
   })
 
+  const metaSym = Symbol("moduleMeta")
+
   return {
     defModule,
     append,
-    empty
+    empty,
+    metaSym
   }
 })()
 
@@ -69,7 +72,11 @@ const instantiate = mod => funs => {
     return shortestPath(x)(acc)(defs[x])
   })(givenMembers)(missing))
 
-  return Obj.append(derived)(mod.methods(derived))
+  const dict = Obj.append(derived)(mod.methods(derived))
+  const meta = { [module.metaSym]: [{ module: mod, initial: funs }] }
+  return Obj.hasKey(module.metaSym)(dict)
+    ? Obj.zipWith(Arr.append)(dict)(meta)
+    : Obj.append(dict)(meta)
 }
 
 // :: String -> WeightedDict -> [ EquivalentDef ] -> WeightedDict
