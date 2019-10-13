@@ -19,7 +19,7 @@ const testMDef = def.define({
 })
 
 const testParam = {
-  f: () => "This is: "
+  f: () => " This is: "
 }
 
 const testModule = module.defModule({

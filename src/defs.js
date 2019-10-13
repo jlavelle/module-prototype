@@ -7,12 +7,12 @@ const functor = (() => {
 
   const mdef = (() => {
     const mapFromAp = ({ ap, of }) => f => a => ap(of(f))(a)
-    const mapFromChain = ({ chain, of }) => f => a => chain(a)(x => of(f(x)))
+    const mapFromChain = ({ chain, of }) => f => a => chain(x => of(f(x)))(a)
     
     return define({
       map: [ 
         depend(["ap", "of"])(mapFromAp),
-        depend(["bind", "of"])(mapFromChain)
+        depend(["chain", "of"])(mapFromChain)
       ]
     })
   })()
@@ -37,7 +37,7 @@ const applicative = (() => {
   const mdef = (() => {
     const apFromLift2 = ({ lift2 }) => fab => fa => lift2(x => x)(fab)(fa)
     const lift2FromMapAp = ({ ap, map }) => f => fa => fb => ap(map(f)(fa))(fb)
-    const apFromChain = ({ of, chain }) => fab => fa => chain(fab)(ab => chain(fa)(a => of(ab(a))))
+    const apFromChain = ({ of, chain }) => fab => fa => chain(ab => chain(a => of(ab(a)))(fa))(fab)
 
     return define({
       ap: [
@@ -71,8 +71,34 @@ const applicative = (() => {
   }))(functor)
 })()
 
+const monad = (() => {
+  const mdef = (() => {
+    const chainFromJoin = ({ join, map }) => afb => fa => join(map(afb)(fa))
+    const joinFromChain = ({ chain }) => ffa => chain(Fn.id)(ffa)
+    
+    return define({
+      chain: [
+        depend(["join", "map"])(chainFromJoin)
+      ],
+      join: [
+        depend(["chain"])(joinFromChain)
+      ]
+    })
+  })()
+
+  const methods = F => {
+    return {}
+  }
+
+  return mod.append(mod.defModule({
+    name: "Monad",
+    mdef,
+    methods
+  }))(applicative)
+})()
 
 export {
   functor,
-  applicative
+  applicative,
+  monad
 }
