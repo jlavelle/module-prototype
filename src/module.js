@@ -57,54 +57,48 @@ const module = (() => {
 
 // Given a module and a canditate dependency, attempt to construct
 // the dict declared by the MDef and class methods
-// Finds the shortest path by assigning every function a weight and choosing the
+// Finds the shortest path to each eequivalent defintion by assigning 
+// every function a weight and choosing the
 // lowest weighted derivation when multiple possibilities exist
 const instantiate = mod => funs => {
   const { defs } = mod.mdef
 
-  const defKeys = Obj.keys(defs)
-
-  // Assign every provided function a weight of one
   const givenMembers = Obj.map(a => [1, a])(funs)
-
-  const missing = Arr.filter(k => !Obj.hasKey(k)(givenMembers))(defKeys)
-
-  // Repeatedly attempt to derive until it is no longer productive
+  const missing = Arr.filter(k => !Obj.hasKey(k)(givenMembers))(Obj.keys(defs))
   const dpred = a => b => sameKeys(a)(b) && sameWeights(a)(b)
+  
+  // Repeatedly attempt to derive until it is no longer productive
   const derived = Obj.map(second)(refoldlUntil(dpred)(acc => x => {
-    const possible = defs[x]
-    
-    // Enumerate and score all possible derivations of x
-    const weighted = mapMaybe(({ names, f }) => {
-      if (hasKeys(names)(acc)) {
-        const steps = Arr.foldMap(IntSum)(n => first(acc[n]))(names)
-        return Maybe.Just({ [x]: [steps + 1, f(Obj.map(second)(acc))] })
-      } else {
-        return Maybe.Nothing
-      }
-    })(possible)
-
-    // Insert the lowest scoring derived functions into the accumulator
-    return Arr.fold({
-      append: o1 => o2 => {
-        const overrides = Obj.zipWith(a => b => {
-          const [w1, _v1] = a
-          const [w2, _v2] = b
-          return w1 <= w2 ? a : b
-        })(o1)(o2)
-        return { ...o1, ...o2, ...overrides }
-      },
-      empty: {}
-    })([acc, ...weighted])
+    return shortestPath(x)(acc)(defs[x])
   })(givenMembers)(missing))
 
   return Obj.append(derived)(mod.methods(derived))
 }
 
-const findPaths = defs => given => {
-  const defKeys = Obj.keys(defs)
-  const missing = Arr.filter(k => !Obj.hasKey(k)(given))(defKeys)
-  return refoldlUntil()
+// :: String -> WeightedDict -> [ EquivalentDef ] -> WeightedDict
+const shortestPath = k => d => Fn.pipe([
+  Arr.foldMap(weightedInsert)(({ names, f }) => {
+    return hasKeys(names)(d)
+    ? { [k]: [ sumDeps(d)(names) + 1, f(Obj.map(second)(d)) ]}
+    : weightedInsert.empty
+  }),
+  weightedInsert.append(d)
+])
+
+const sumDeps = d => ns => Arr.foldMap(IntSum)(n => first(d[n]))(ns)
+
+// A monoid on Compose Obj (Int,) that is biased to the lowest Int
+// e.g. { foo: [1, 'a'] } <> { foo: [2, 'b'] } === { foo: [1, 'a'] }
+const weightedInsert = {
+  append: o1 => o2 => {
+    const xs = Obj.zipWith(a => b => {
+      const [w1] = a
+      const [w2] = b
+      return w1 <= w2 ? a : b
+    })(o1)(o2)
+    return Arr.fold(Obj)([o1, o2, xs])
+  },
+  empty: {}
 }
 
 // Feed the results of a foldl back into itself until a predicate
@@ -161,6 +155,8 @@ const and = (() => {
     empty
   }
 })()
+
+const sum = Arr.fold(IntSum)
 
 const second = ([_, a]) => a
 const first = ([a, _]) => a
