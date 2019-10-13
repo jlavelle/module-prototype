@@ -36,7 +36,11 @@ const module = (() => {
   const append = a => b => ({
     contains: Arr.append(a.contains)(b.contains),
     mdef: minimalDef.append(a.mdef)(b.mdef),
-    methods: ms => Obj.append(a.methods(ms))(b.methods(ms))
+    methods: ms => {
+      const ams = a.methods(ms)
+      const bms = b.methods(Obj.append(ms)(ams))
+      return Obj.append(ams)(bms)
+    }
   })
 
   const empty = ({
@@ -55,7 +59,7 @@ const module = (() => {
   }
 })()
 
-// Given a module and a canditate dependency, attempt to construct
+// Given a module and a canditate dict, attempt to construct
 // the dict declared by the MDef and class methods
 // Finds the shortest path to each eequivalent defintion by assigning 
 // every function a weight and choosing the
@@ -63,7 +67,12 @@ const module = (() => {
 const instantiate = mod => funs => {
   const { defs } = mod.mdef
 
-  const givenMembers = Obj.map(a => [1, a])(funs)
+  // If no dict is provided try to treat this as a leaf
+  const funsPlus = !funs || Obj.keys(funs).length === 0
+    ? mod.methods()
+    : funs
+
+  const givenMembers = Obj.map(a => [1, a])(funsPlus)
   const missing = Arr.filter(k => !Obj.hasKey(k)(givenMembers))(Obj.keys(defs))
   const dpred = a => b => sameKeys(a)(b) && sameWeights(a)(b)
   

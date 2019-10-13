@@ -1,6 +1,7 @@
 import test from 'ava'
 import { functor, applicative, monad } from './defs'
-import { instantiate } from './module'
+import { instantiate, module as mod, minimalDef } from './module'
+import { IntSum, Fn } from '@masaeedu/fp'
 
 const identityF_ = (() => {
   const map = f => a => f(a)
@@ -43,4 +44,28 @@ test("monad", t => {
   t.is(10, identityM.of(10))
   t.is(10, identityM.join(10))
   t.is(10, identityM.chain(x => x + 5)(5))
+})
+
+const arr_ = (() => {
+  const map = f => xs => xs.map(f)
+  const join = xxs => xxs.reduce((acc, x) => acc.concat(x), [])
+  const of = a => [a]
+  const foldl = f => a => xs => xs.reduce((acc, x) => f(acc)(x), a)
+
+  return mod.defModule({
+    name: "Arr",
+    mdef: minimalDef.empty,
+    methods: () => ({
+      map, join, of, foldl
+    }),
+  })
+})()
+
+const arr = instantiate(mod.append(arr_)(monad))({})
+
+test("arr", t => {
+  t.snapshot(arr)
+  t.true(arr.hasOwnProperty('lift2'))
+  t.deepEqual([1,1,2,2,3,3], arr.lift2(Fn.const)([1,2,3])([1,2]))
+  t.deepEqual([2,3,3,4,4,5], arr.chain(a => [a + 1, a + 2])([1,2,3]))
 })
