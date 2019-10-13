@@ -5,28 +5,24 @@ import { module, minimalDef as def, instantiate, restrictKeys, refoldlUntil, sam
 // Same shape as Foldable; only one impl. is required
 const testMDef = def.define({
   baz: [ 
-    def.depend(["bar"])(({ t, bar }) => () => t.f() + "baz from " + bar()),
-    def.depend(["foo"])(({ t, foo }) => () => t.f() + "baz from " + foo())
+    def.depend(["bar"])(({ t, bar }) => () => "baz from " + bar()),
+    def.depend(["foo"])(({ t, foo }) => () => "baz from " + foo())
   ],
   foo: [ 
-    def.depend(["bar"])(({ t, bar }) => () => t.f() + "foo from " + bar()),
-    def.depend(["baz"])(({ t, baz }) => () => t.f() + "foo from " + baz())
+    def.depend(["bar"])(({ t, bar }) => () => "foo from " + bar()),
+    def.depend(["baz"])(({ t, baz }) => () => "foo from " + baz())
   ],
   bar: [ 
-    def.depend(["foo"])(({ t, foo }) => () => t.f() + "bar from " + foo()),
-    def.depend(["baz"])(({ t, baz }) => () => t.f() + "bar from " + baz())
+    def.depend(["foo"])(({ t, foo }) => () => "bar from " + foo()),
+    def.depend(["baz"])(({ t, baz }) => () => "bar from " + baz())
   ]
 })
-
-const testParam = {
-  f: () => " This is: "
-}
 
 const testModule = module.defModule({
   name: "Test",
   mdef: testMDef,
-  methods: ({ t, foo, bar, baz }) => {
-    const quux = () => t.f() + foo() + bar() + baz()
+  methods: ({ foo, bar, baz }) => {
+    const quux = () => foo() + " " + bar() + " " + baz()
 
     return {
       quux
@@ -34,14 +30,18 @@ const testModule = module.defModule({
   }
 })
 
-const testMdef2 = def.define({
-  qud: [],
-  fud: []
+const testMDef2 = def.define({
+  qud: [
+    def.depend(["bar"])(({ bar }) => () => "qud from " + bar())
+  ],
+  bob: [
+    def.depend(["qud"])(({ qud }) => () => qud())
+  ]
 })
 
 const testModule2 = module.defModule({
   name: "Test2",
-  mdef: testMDef,
+  mdef: testMDef2,
   methods: ({ quux, qud, fud }) => {
     const quuz = () => quux() + ' - 2'
 
@@ -64,12 +64,24 @@ test("module monoid idempotent/commutative", t => {
     t.deepEqual(appended1[prop], appended2[prop])
     t.deepEqual(appended2[prop], folded[prop])
   })
+
+  const ms = [appended1, appended2, folded]
+  const mins = ["foo", "bar", "baz"]
+  const all = Arr.append(mins)(["quux", "qud", "bob"])
+  mins.forEach(n => {
+    const d = { [n]: () => 'a ' + n }
+    const [m1, m2, m3] = Arr.map(m => instantiate(m)(d))(ms)
+    all.forEach(m => {
+      t.deepEqual(m1[m](), m2[m]())
+      t.deepEqual(m2[m](), m3[m]())
+    })
+  })
 })
 
 test("instantiate", t => {
   const ns = ["foo", "bar", "baz"]
   ns.forEach(n => {
-    const m = instantiate(testModule)({ t: testParam, [n]: () => 'a ' + n})
+    const m = instantiate(testModule)({ [n]: () => 'a ' + n })
     ns.forEach(n => t.snapshot(m[n]()))
     t.snapshot(m.quux())
   })
