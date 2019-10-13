@@ -65,7 +65,6 @@ const arr = instantiate(mod.append(arr_)(monad))({})
 
 test("arr", t => {
   t.snapshot(arr)
-  t.true(arr.hasOwnProperty('lift2'))
   t.deepEqual([1,1,2,2,3,3], arr.lift2(Fn.const)([1,2,3])([1,2]))
   t.deepEqual([2,3,3,4,4,5], arr.chain(a => [a + 1, a + 2])([1,2,3]))
 })

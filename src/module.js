@@ -34,9 +34,14 @@ const module = (() => {
   // not really a monoid since the record types in `methods` are combined
   // at the type level
   const append = a => b => ({
-    contains: Arr.append(a.contains)(b.contains),
+    contains: (() => {
+      // to keep append commutative and idempotent
+      const n = Arr.append(a.contains)(b.contains)
+      return [...new Set(n)].sort()
+    })(),
     mdef: minimalDef.append(a.mdef)(b.mdef),
     methods: ms => {
+      // give appended modules access to methods from preceding modules
       const ams = a.methods(ms)
       const bms = b.methods(Obj.append(ms)(ams))
       return Obj.append(ams)(bms)
@@ -83,6 +88,7 @@ const instantiate = mod => funs => {
 
   const dict = Obj.append(derived)(mod.methods(derived))
   const meta = { [module.metaSym]: [{ module: mod, initial: funs }] }
+  
   return Obj.hasKey(module.metaSym)(dict)
     ? Obj.zipWith(Arr.append)(dict)(meta)
     : Obj.append(dict)(meta)

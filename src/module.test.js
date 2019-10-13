@@ -1,5 +1,5 @@
 import test from 'ava'
-import { Maybe, Fn } from '@masaeedu/fp'
+import { Maybe, Fn, Arr } from '@masaeedu/fp'
 import { module, minimalDef as def, instantiate, restrictKeys, refoldlUntil, sameKeys, mapMaybe, sameWeights } from './module'
 
 // Same shape as Foldable; only one impl. is required
@@ -32,6 +32,38 @@ const testModule = module.defModule({
       quux
     }
   }
+})
+
+const testMdef2 = def.define({
+  qud: [],
+  fud: []
+})
+
+const testModule2 = module.defModule({
+  name: "Test2",
+  mdef: testMDef,
+  methods: ({ quux, qud, fud }) => {
+    const quuz = () => quux() + ' - 2'
+
+    return {
+      quuz
+    }
+  }
+})
+
+test("module monoid idempotent/commutative", t => {
+  const appended1 = module.append(testModule)(testModule2)
+  const appended2 = module.append(testModule2)(testModule)
+  const folded = Arr.fold(module)([testModule, testModule2, testModule, appended1, appended2])
+  const props = ["contains", "mdef"]
+  props.forEach(prop => {
+    t.deepEqual(testModule[prop], module.append(testModule)(testModule)[prop])
+    t.deepEqual(testModule[prop], module.append(module.empty)(testModule)[prop])
+    t.deepEqual(testModule[prop], module.append(testModule)(module.empty)[prop])
+
+    t.deepEqual(appended1[prop], appended2[prop])
+    t.deepEqual(appended2[prop], folded[prop])
+  })
 })
 
 test("instantiate", t => {
