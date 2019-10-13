@@ -1,18 +1,21 @@
 import test from 'ava'
 import { Maybe, Fn } from '@masaeedu/fp'
-import { module, minimalDef as def, instantiate, restrictKeys, refoldlUntil, sameKeys, mapMaybe } from './module'
+import { module, minimalDef as def, instantiate, restrictKeys, refoldlUntil, sameKeys, mapMaybe, sameWeights } from './module'
 
 // Same shape as Foldable; only one impl. is required
 const testMDef = def.define({
-  baz: [ def.depend(["bar"])(({ t, bar }) => () => t.f() + "baz from " + bar()),
-          def.depend(["foo"])(({ t, foo }) => () => t.f() + "baz from " + foo())
-        ],
-  foo: [ def.depend(["bar"])(({ t, bar }) => () => t.f() + "foo from " + bar()),
-          def.depend(["baz"])(({ t, baz }) => () => t.f() + "foo from " + baz())
-        ],
-  bar: [ def.depend(["foo"])(({ t, foo }) => () => t.f() + "bar from " + foo()),
-          def.depend(["baz"])(({ t, baz }) => () => t.f() + "bar from " + baz())
-        ]
+  baz: [ 
+    def.depend(["bar"])(({ t, bar }) => () => t.f() + "baz from " + bar()),
+    def.depend(["foo"])(({ t, foo }) => () => t.f() + "baz from " + foo())
+  ],
+  foo: [ 
+    def.depend(["bar"])(({ t, bar }) => () => t.f() + "foo from " + bar()),
+    def.depend(["baz"])(({ t, baz }) => () => t.f() + "foo from " + baz())
+  ],
+  bar: [ 
+    def.depend(["foo"])(({ t, foo }) => () => t.f() + "bar from " + foo()),
+    def.depend(["baz"])(({ t, baz }) => () => t.f() + "bar from " + baz())
+  ]
 })
 
 const testParam = {
@@ -60,6 +63,13 @@ test("sameKeys", t => {
   const y = { foo: 1, bar: 2 }
   t.true(sameKeys(x)(x))
   t.false(sameKeys(x)(y))
+})
+
+test("sameWeights", t => {
+  const x = { foo: [1, 'a'], bar: [2, 'b' ]}
+  const y = { foo: [3, 'a'], bar: [4, 'b' ]}
+  t.true(sameWeights(x)(x))
+  t.false(sameWeights(x)(y))
 })
 
 test("mapMaybe", t => {

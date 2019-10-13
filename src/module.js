@@ -70,7 +70,8 @@ const instantiate = mod => funs => {
   const missing = Arr.filter(k => !Obj.hasKey(k)(givenMembers))(defKeys)
 
   // Repeatedly attempt to derive until it is no longer productive
-  const derived = Obj.map(second)(refoldlUntil(sameKeys)(acc => x => {
+  const dpred = a => b => sameKeys(a)(b) && sameWeights(a)(b)
+  const derived = Obj.map(second)(refoldlUntil(dpred)(acc => x => {
     const possible = defs[x]
     
     // Enumerate and score all possible derivations of x
@@ -137,6 +138,10 @@ const sameKeys = o1 => o2 => {
   return Arr.fold(and)(Arr.zipWith(a => b => a === b)(a)(b))
 }
 
+const sameWeights = o1 => o2 => {
+  return Obj.fold(and)(Obj.zipWith(a => b => first(a) === first(b))(o1)(o2))
+}
+
 const sortedKeys = o => Obj.keys(o).sort()
 
 const mapMaybe = f => {
@@ -161,5 +166,5 @@ const second = ([_, a]) => a
 const first = ([a, _]) => a
 
 export {
-  minimalDef, instantiate, restrictKeys, refoldlUntil, sameKeys, mapMaybe, module
+  minimalDef, instantiate, restrictKeys, refoldlUntil, sameKeys, mapMaybe, module, sameWeights
 }
