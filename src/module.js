@@ -28,30 +28,27 @@ const module = (() => {
   
   // constructor
   const defModule = ({ name, mdef, methods }) => {
-    return { name, mdef, methods }
+    return { contains: [ name ], mdef, methods }
   }
 
   // not really a monoid since the record types in `methods` are combined
   // at the type level
-  const append = a => b => defModule({
-    name: a.name + b.name,
+  const append = a => b => ({
+    contains: Arr.append(a.contains)(b.contains),
     mdef: minimalDef.append(a.mdef)(b.mdef),
     methods: ms => Obj.append(a.methods(ms))(b.methods(ms))
   })
 
-  const empty = defModule({
-    name: '',
+  const empty = ({
+    contains: [],
     mdef: minimalDef.empty,
     methods: x => Obj.empty
   })
 
-  const rename = m => s => ({ ...m, name: s })
-
   return {
     defModule,
     append,
-    empty,
-    rename
+    empty
   }
 })()
 
@@ -79,8 +76,8 @@ const instantiate = mod => funs => {
 const shortestPath = k => d => Fn.pipe([
   Arr.foldMap(weightedInsert)(({ names, f }) => {
     return hasKeys(names)(d)
-    ? { [k]: [ sumDeps(d)(names) + 1, f(Obj.map(second)(d)) ]}
-    : weightedInsert.empty
+      ? { [k]: [ sumDeps(d)(names) + 1, f(Obj.map(second)(d)) ]}
+      : weightedInsert.empty
   }),
   weightedInsert.append(d)
 ])
@@ -108,7 +105,7 @@ const refoldlUntil = pred => f => b => as => {
     const res1 = Arr.foldl(f)(nres)(as)
     const res2 = Arr.foldl(f)(res1)(as)
     if (pred(res1)(res2)) {
-      return res2
+      return res1
     } else {
       return rec(res2)
     }
@@ -129,7 +126,7 @@ const hasKeys = ks => o => Arr.foldMap(and)(k => Obj.hasKey(k)(o))(ks)
 const sameKeys = o1 => o2 => {
   const a = sortedKeys(o1)
   const b = sortedKeys(o2)
-  return Arr.fold(and)(Arr.zipWith(a => b => a === b)(a)(b))
+  return a.length === b.length && Arr.fold(and)(Arr.zipWith(a => b => a === b)(a)(b))
 }
 
 const sameWeights = o1 => o2 => {

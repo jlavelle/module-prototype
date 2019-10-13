@@ -61,8 +61,11 @@ test("refoldlUntil", t => {
 test("sameKeys", t => {
   const x = { foo: 1, bar: 2, baz: 3 }
   const y = { foo: 1, bar: 2 }
+  const z = { f: 1, g: 2 }
+  const w = { f: 1 }
   t.true(sameKeys(x)(x))
   t.false(sameKeys(x)(y))
+  t.false(sameKeys(z)(w))
 })
 
 test("sameWeights", t => {
